@@ -17,6 +17,8 @@ import {
     Check
 } from 'lucide-react';
 import { useJobContext } from '../context/JobContext';
+import { Helmet } from 'react-helmet-async';
+import { sanitizeUrl } from '../lib/security';
 import { formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import toast from 'react-hot-toast';
@@ -128,6 +130,10 @@ const JobSearch = () => {
 
     return (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <Helmet>
+                <title>Recherche d'emplois • JobTracker</title>
+                <meta name="description" content="Filtrez par remote, salaire, date de publication et source pour trouver votre prochain emploi." />
+            </Helmet>
             {/* Header */}
             <div className="mb-8">
                 <h1 className="text-3xl font-bold text-gray-900 mb-2">
@@ -439,7 +445,7 @@ const JobSearch = () => {
                                                 Postuler
                                             </button>
                                             <a
-                                                href={job.url}
+                                                href={sanitizeUrl(job.url)}
                                                 target="_blank"
                                                 rel="noreferrer noopener"
                                                 className="p-2 sm:p-2.5 text-gray-400 hover:text-gray-600 transition-colors"

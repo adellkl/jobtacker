@@ -1,10 +1,13 @@
 import React from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
+import { Helmet } from 'react-helmet-async';
 import { Toaster } from 'react-hot-toast';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import Dashboard from './pages/Dashboard';
+import Preview from './pages/Preview';
+import NotFound from './pages/NotFound';
 import JobSearch from './pages/JobSearch';
 import Applications from './pages/Applications';
 import Profile from './pages/Profile';
@@ -17,7 +20,7 @@ import Login from './pages/Login';
 function PrivateRoute({ children }) {
     const { user, loading } = useAuth();
     if (loading) return null;
-    return user ? children : <Navigate to="/login" replace />;
+    return user ? children : <Navigate to="/preview" replace />;
 }
 
 function PageTransition({ children }) {
@@ -35,23 +38,21 @@ function PageTransition({ children }) {
 
 function App() {
     const location = useLocation();
+    const hideFooter = location.pathname === '/login';
     return (
         <AuthProvider>
             <NotificationProvider>
                 <JobProvider>
                     <div className="min-h-screen bg-gray-50 overflow-x-hidden">
+                        <Helmet>
+                            <title>JobTracker</title>
+                            <link rel="canonical" href={window.location.href} />
+                        </Helmet>
                         <Navbar />
                         <main className="pt-16">
                             <AnimatePresence mode="wait" initial={false}>
                                 <Routes location={location} key={location.pathname}>
-                                    <Route
-                                        path="/login"
-                                        element={
-                                            <PageTransition>
-                                                <Login />
-                                            </PageTransition>
-                                        }
-                                    />
+                                    <Route path="/login" element={<PageTransition><Login /></PageTransition>} />
                                     <Route
                                         path="/"
                                         element={
@@ -62,6 +63,8 @@ function App() {
                                             </PageTransition>
                                         }
                                     />
+                                    <Route path="/preview" element={<PageTransition><Preview /></PageTransition>} />
+                                    <Route path="*" element={<PageTransition><NotFound /></PageTransition>} />
                                     <Route
                                         path="/search"
                                         element={
@@ -105,7 +108,7 @@ function App() {
                                 </Routes>
                             </AnimatePresence>
                         </main>
-                        <Footer />
+                        {!hideFooter && <Footer />}
                         <Toaster
                             position="top-right"
                             toastOptions={{

@@ -16,6 +16,7 @@ import { fr } from 'date-fns/locale';
 import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 import LineChart from '../components/LineChart';
+import { Helmet } from 'react-helmet-async';
 
 const Dashboard = () => {
     const { applications, searchJobs, loading, addApplication } = useJobContext();
@@ -203,7 +204,10 @@ const Dashboard = () => {
 
     return (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-            {/* Header */}
+            <Helmet>
+                <title>Tableau de bord • JobTracker</title>
+            </Helmet>
+
             <div className="mb-8">
                 <h1 className="text-3xl font-bold text-gray-900 mb-2">
                     Tableau de bord
@@ -213,7 +217,7 @@ const Dashboard = () => {
                 </p>
             </div>
 
-            {/* Stats Grid */}
+
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
                 {stats.map((stat, index) => {
                     const Icon = stat.icon;
@@ -246,7 +250,7 @@ const Dashboard = () => {
                 })}
             </div>
 
-            {/* Quick Actions */}
+
             <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -270,7 +274,7 @@ const Dashboard = () => {
                 </div>
             </motion.div>
 
-            {/* Recent Applications */}
+
             <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -336,7 +340,7 @@ const Dashboard = () => {
                 )}
             </motion.div>
 
-            {/* Insights */}
+
             <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}

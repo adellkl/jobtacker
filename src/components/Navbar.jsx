@@ -23,12 +23,28 @@ const Navbar = () => {
     const { unreadCount, notifications, markAllRead } = useNotifications();
     const [openPanel, setOpenPanel] = useState(false);
 
-    const navItems = [
-        { path: '/', label: 'Tableau de bord', icon: Home },
-        { path: '/search', label: 'Recherche', icon: Search },
-        { path: '/applications', label: 'Candidatures', icon: FileText },
-        { path: '/profile', label: 'Profil', icon: User },
-    ];
+    const isPreview = location.pathname === '/preview';
+    const isLogin = location.pathname.startsWith('/login');
+    const isAuthenticated = Boolean(user);
+    const navItems = isLogin
+        ? []
+        : isPreview
+            ? (
+                isAuthenticated
+                    ? [
+                        { path: '/', label: 'Tableau de bord', icon: Home },
+                        { path: '/search', label: 'Recherche', icon: Search },
+                        { path: '/applications', label: 'Candidatures', icon: FileText },
+                        { path: '/profile', label: 'Profil', icon: User },
+                    ]
+                    : [] // login/signup seront affichés à droite
+            )
+            : [
+                { path: '/', label: 'Tableau de bord', icon: Home },
+                { path: '/search', label: 'Recherche', icon: Search },
+                { path: '/applications', label: 'Candidatures', icon: FileText },
+                { path: '/profile', label: 'Profil', icon: User },
+            ];
 
     const isActive = (path) => location.pathname === path;
 
@@ -36,7 +52,7 @@ const Navbar = () => {
         <nav className="fixed top-0 left-0 right-0 z-[60] bg-white/80 backdrop-blur-md border-b border-gray-200 shadow-sm">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="flex justify-between items-center h-16">
-                    {/* Logo */}
+
                     <Link to="/" className="flex items-center space-x-2">
                         <div className="w-8 h-8 sm:w-9 sm:h-9 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
                             <Briefcase className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
@@ -46,7 +62,7 @@ const Navbar = () => {
                         </span>
                     </Link>
 
-                    {/* Navigation desktop */}
+
                     <div className="hidden md:flex items-center space-x-1">
                         {navItems.map((item) => {
                             const Icon = item.icon;
@@ -76,35 +92,22 @@ const Navbar = () => {
                         })}
                     </div>
 
-                    {/* Actions desktop */}
+
                     <div className="hidden md:flex items-center space-x-3">
-                        <div className="relative">
-                            <button onClick={() => { setOpenPanel(!openPanel); if (openPanel === false) markAllRead(); }} className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors relative">
-                                <Bell className="w-5 h-5" />
-                                {unreadCount > 0 && (
-                                    <span className="absolute -top-1 -right-1 inline-flex items-center justify-center w-4 h-4 text-xs font-medium bg-red-600 text-white rounded-full">{unreadCount}</span>
-                                )}
-                            </button>
-                            {openPanel && (
-                                <div className="absolute right-0 mt-2 w-80 bg-white border border-gray-200 rounded-xl shadow-lg z-50">
-                                    <div className="px-3 py-2 border-b border-gray-100 flex items-center justify-between">
-                                        <span className="text-sm font-medium text-gray-900">Notifications</span>
-                                        <button onClick={() => setOpenPanel(false)} className="text-gray-500 text-sm hover:text-gray-700">Fermer</button>
-                                    </div>
-                                    <div className="max-h-80 overflow-y-auto">
-                                        {notifications.length === 0 ? (
-                                            <div className="p-4 text-sm text-gray-500">Aucune notification</div>
-                                        ) : notifications.map((n) => (
-                                            <div key={n.id} className={`px-4 py-3 text-sm ${n.read_at ? 'bg-white' : 'bg-blue-50'}`}>
-                                                <p className="font-medium text-gray-900">{n.title}</p>
-                                                {n.body && <p className="text-gray-600 mt-0.5">{n.body}</p>}
-                                                <p className="text-xs text-gray-400 mt-1">{new Date(n.created_at).toLocaleString('fr-FR')}</p>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
-                        </div>
+                        {(!isPreview || isLogin) && (
+                            <Link
+                                to="/preview"
+                                className={`px-3 py-1.5 rounded-lg text-sm font-medium border ${isPreview ? 'border-blue-200 text-blue-600 bg-blue-50' : 'border-gray-300 text-gray-700 hover:bg-gray-50'}`}
+                            >
+                                Preview
+                            </Link>
+                        )}
+                        {!isAuthenticated && isPreview && (
+                            <div className="flex items-center gap-2">
+                                <Link to="/login" className="px-3 py-1.5 rounded-lg text-sm font-medium border border-gray-300 hover:bg-gray-50">Log in</Link>
+                                <Link to="/login?mode=signup" className="px-3 py-1.5 rounded-lg text-sm font-medium bg-blue-600 text-white hover:bg-blue-700">Sign up</Link>
+                            </div>
+                        )}
                         {user ? (
                             <>
                                 <div className="w-8 h-8 sm:w-9 sm:h-9 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full flex items-center justify-center">
@@ -115,11 +118,11 @@ const Navbar = () => {
                                 </button>
                             </>
                         ) : (
-                            <Link to="/login" className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm hover:bg-gray-50">Se connecter</Link>
+                            isPreview || isLogin ? null : <Link to="/login" className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm hover:bg-gray-50">Se connecter</Link>
                         )}
                     </div>
 
-                    {/* Menu mobile button */}
+
                     <button
                         className="md:hidden p-2 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors"
                         onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
@@ -129,7 +132,7 @@ const Navbar = () => {
                 </div>
             </div>
 
-            {/* Menu mobile */}
+
             {isMobileMenuOpen && (
                 <motion.div
                     initial={{ opacity: 0, y: -20 }}
@@ -138,23 +141,37 @@ const Navbar = () => {
                     className="md:hidden bg-white border-t border-gray-200"
                 >
                     <div className="px-4 py-2 space-y-1">
-                        {navItems.map((item) => {
-                            const Icon = item.icon;
-                            return (
-                                <Link
-                                    key={item.path}
-                                    to={item.path}
-                                    className={`flex items-center space-x-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors ${isActive(item.path)
-                                        ? 'text-blue-600 bg-blue-50'
-                                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-                                        }`}
-                                    onClick={() => setIsMobileMenuOpen(false)}
-                                >
-                                    <Icon className="w-5 h-5" />
-                                    <span>{item.label}</span>
-                                </Link>
-                            );
-                        })}
+                        {isLogin ? (
+                            <Link
+                                to="/preview"
+                                className={`flex items-center space-x-3 px-4 py-3 rounded-lg text-sm font-medium ${isActive('/preview') ? 'text-blue-600 bg-blue-50' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'}`}
+                                onClick={() => setIsMobileMenuOpen(false)}
+                            >
+                                <Home className="w-5 h-5" />
+                                <span>Preview</span>
+                            </Link>
+                        ) : (
+                            (navItems.length ? navItems : (!isAuthenticated && isPreview ? [
+                                { path: '/login', label: 'Log in', icon: User },
+                                { path: '/login?mode=signup', label: 'Sign up', icon: User },
+                            ] : [])).map((item) => {
+                                const Icon = item.icon;
+                                return (
+                                    <Link
+                                        key={item.path}
+                                        to={item.path}
+                                        className={`flex items-center space-x-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors ${isActive(item.path)
+                                            ? 'text-blue-600 bg-blue-50'
+                                            : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                                            }`}
+                                        onClick={() => setIsMobileMenuOpen(false)}
+                                    >
+                                        <Icon className="w-5 h-5" />
+                                        <span>{item.label}</span>
+                                    </Link>
+                                );
+                            })
+                        )}
                     </div>
                 </motion.div>
             )}

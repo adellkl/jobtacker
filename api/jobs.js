@@ -1,6 +1,3 @@
-// API serverless d'agrégation d'offres (Vercel/Netlify compatible)
-// Endpoint: /api/jobs?q=react&source=LinkedIn&location=Paris&remote=true&type=CDI&datePosted=7d&company=Doctolib
-
 export default async function handler(req, res) {
     try {
         const RPD_HOST = 'jsearch.p.rapidapi.com';
