@@ -750,8 +750,8 @@ const Profile = () => {
                                         </p>
                                         <p className="text-sm text-gray-600">
                                             {key === 'emailNotifications' && 'Recevoir des notifications par email'}
-                                            {key === 'pushNotifications' && 'Recevoir des notifications push'}
-                                            {key === 'weeklyReports' && 'Recevoir un rapport hebdomadaire de vos candidatures'}
+                                            {key === 'pushNotifications' && 'Recevoir des notifications push (bientôt disponible)'}
+                                            {key === 'weeklyReports' && 'Recevoir un rapport hebdomadaire de vos candidatures '}
                                             {key === 'jobAlerts' && 'Recevoir des alertes pour de nouveaux emplois'}
                                             {key === 'privacyMode' && 'Masquer votre profil des recruteurs'}
                                         </p>

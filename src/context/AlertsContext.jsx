@@ -94,7 +94,7 @@ export const AlertsProvider = ({ children }) => {
         }
     }
 
-    // Exécution périodique simple côté client pendant la session (toutes les 10 min)
+
     useEffect(() => {
         if (!user) return
         const id = setInterval(() => {
