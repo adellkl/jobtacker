@@ -14,7 +14,7 @@ function getMinMax(series) {
     if (!Number.isFinite(min)) min = 0;
     if (!Number.isFinite(max)) max = 1;
     if (min === max) {
-        // Avoid flat line scaling
+
         min = 0;
     }
     return { min, max };

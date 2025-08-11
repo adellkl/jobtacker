@@ -22,15 +22,20 @@ import { sanitizeUrl } from '../lib/security';
 import { formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import toast from 'react-hot-toast';
+import { useAlerts } from '../context/AlertsContext';
 
 const JobSearch = () => {
     const { searchResults, loading, filters, setFilters, searchJobs, addApplication, toggleSaveJob, error } = useJobContext();
+    const { createAlert } = useAlerts();
     const [searchQuery, setSearchQuery] = useState('');
     const [showFilters, setShowFilters] = useState(false);
     const [sortBy, setSortBy] = useState('recent');
     const [page, setPage] = useState(1);
     const PAGE_SIZE = 6;
     const [selectedJob, setSelectedJob] = useState(null);
+    const [showAlertModal, setShowAlertModal] = useState(false);
+    const [alertQuery, setAlertQuery] = useState('');
+    const [alertFilters, setAlertFilters] = useState({});
     const sources = ['LinkedIn', 'Welcome to the Jungle', 'Monster', 'Indeed'];
     const contractTypes = ['CDI', 'CDD', 'Intérim', 'Alternance', 'Stage'];
 
@@ -48,6 +53,18 @@ const JobSearch = () => {
         e.preventDefault();
         setPage(1);
         searchJobs(searchQuery, filters);
+    };
+
+    const handleOpenAlertModal = () => {
+        setAlertQuery(searchQuery || '');
+        setAlertFilters({ ...filters });
+        setShowAlertModal(true);
+    };
+
+    const handleSaveAlert = async () => {
+        await createAlert({ query: alertQuery, filters: alertFilters });
+        setShowAlertModal(false);
+        toast.success('Alerte créée avec succès');
     };
 
     const handleApply = (job) => {
@@ -169,6 +186,14 @@ const JobSearch = () => {
                     </button>
                     <button
                         type="button"
+                        onClick={handleOpenAlertModal}
+                        className="px-4 py-3 border rounded-lg transition-colors font-medium text-blue-700 border-blue-300 bg-blue-50 hover:bg-blue-100"
+                        title="Créer une alerte avancée"
+                    >
+                        Alerte avancée
+                    </button>
+                    <button
+                        type="button"
                         onClick={() => setShowFilters(!showFilters)}
                         className={`px-4 py-3 border rounded-lg transition-colors flex items-center space-x-2 ${showFilters
                             ? 'border-blue-600 text-blue-600 bg-blue-50'
@@ -273,23 +298,6 @@ const JobSearch = () => {
                                 </select>
                             </div>
 
-
-
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">Date de publication</label>
-                                <select
-                                    value={filters.datePosted}
-                                    onChange={(e) => handleFilterChange('datePosted', e.target.value)}
-                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                >
-                                    <option value="">Toutes</option>
-                                    <option value="24h">Dernières 24h</option>
-                                    <option value="7d">7 derniers jours</option>
-                                    <option value="14d">14 derniers jours</option>
-                                    <option value="30d">30 derniers jours</option>
-                                </select>
-                            </div>
-
                             <div className="flex items-center space-x-3">
                                 <label className="flex items-center space-x-2">
                                     <input
@@ -301,8 +309,6 @@ const JobSearch = () => {
                                     <span className="text-sm text-gray-700">Favoris uniquement</span>
                                 </label>
                             </div>
-
-
 
                             <div className="flex items-center space-x-3">
                                 <label className="flex items-center space-x-2">
@@ -414,22 +420,6 @@ const JobSearch = () => {
                                         {stripHtml(job.description)}
                                     </p>
 
-                                    <div className="flex flex-wrap gap-2 mb-4">
-                                        {job.requirements.slice(0, 3).map((req, idx) => (
-                                            <span
-                                                key={idx}
-                                                className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full"
-                                            >
-                                                {req}
-                                            </span>
-                                        ))}
-                                        {job.requirements.length > 3 && (
-                                            <span className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full">
-                                                +{job.requirements.length - 3}
-                                            </span>
-                                        )}
-                                    </div>
-
                                     <div className="flex items-center justify-between">
                                         <span className="text-xs text-gray-500">
                                             Publié {formatDistanceToNow(new Date(job.postedAt), {
@@ -531,6 +521,113 @@ const JobSearch = () => {
                                 <a href={selectedJob.url} target="_blank" rel="noreferrer noopener" className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">Voir l'offre originale</a>
                                 <button onClick={() => { handleApply(selectedJob); setSelectedJob(null); }} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Postuler</button>
                             </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Alert Modal */}
+            {showAlertModal && (
+                <div className="fixed inset-0 z-[56] flex items-center justify-center">
+                    <div className="absolute inset-0 bg-black/40" onClick={() => setShowAlertModal(false)} />
+                    <div className="relative bg-white w-full max-w-2xl max-h-[85vh] overflow-y-auto rounded-xl shadow-lg border border-gray-200">
+                        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
+                            <h3 className="font-semibold text-gray-900">Créer une alerte</h3>
+                            <button onClick={() => setShowAlertModal(false)} className="p-2 text-gray-600 hover:text-gray-900" aria-label="Fermer">
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+                        <div className="p-6 space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">Mots-clés</label>
+                                <input
+                                    type="text"
+                                    value={alertQuery}
+                                    onChange={(e) => setAlertQuery(e.target.value)}
+                                    placeholder="Ex: développeur react, data engineer..."
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                />
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">Entreprise</label>
+                                    <input
+                                        type="text"
+                                        value={alertFilters.company || ''}
+                                        onChange={(e) => setAlertFilters({ ...alertFilters, company: e.target.value })}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">Localisation</label>
+                                    <input
+                                        type="text"
+                                        value={alertFilters.location || ''}
+                                        onChange={(e) => setAlertFilters({ ...alertFilters, location: e.target.value })}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">Source</label>
+                                    <select
+                                        value={alertFilters.source || ''}
+                                        onChange={(e) => setAlertFilters({ ...alertFilters, source: e.target.value })}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    >
+                                        <option value="">Toutes</option>
+                                        {sources.map(s => <option key={s} value={s}>{s}</option>)}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">Type</label>
+                                    <select
+                                        value={alertFilters.type || ''}
+                                        onChange={(e) => setAlertFilters({ ...alertFilters, type: e.target.value })}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    >
+                                        <option value="">Tous</option>
+                                        {contractTypes.map(t => <option key={t} value={t}>{t}</option>)}
+                                    </select>
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <label className="flex items-center space-x-2">
+                                    <input
+                                        type="checkbox"
+                                        checked={!!alertFilters.remote}
+                                        onChange={(e) => setAlertFilters({ ...alertFilters, remote: e.target.checked })}
+                                        className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                                    />
+                                    <span className="text-sm text-gray-700">Télétravail</span>
+                                </label>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">Salaire min (k€)</label>
+                                    <input
+                                        type="number"
+                                        value={alertFilters.salaryMin || ''}
+                                        onChange={(e) => setAlertFilters({ ...alertFilters, salaryMin: e.target.value })}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">Date de publication</label>
+                                    <select
+                                        value={alertFilters.datePosted || ''}
+                                        onChange={(e) => setAlertFilters({ ...alertFilters, datePosted: e.target.value })}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    >
+                                        <option value="">Toutes</option>
+                                        <option value="24h">Dernières 24h</option>
+                                        <option value="7d">7 derniers jours</option>
+                                        <option value="14d">14 derniers jours</option>
+                                        <option value="30d">30 derniers jours</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="flex items-center justify-end gap-2 px-4 py-3 border-t border-gray-200">
+                            <button onClick={() => setShowAlertModal(false)} className="px-4 py-2 text-gray-700 hover:text-gray-900">Annuler</button>
+                            <button onClick={handleSaveAlert} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Enregistrer l'alerte</button>
                         </div>
                     </div>
                 </div>

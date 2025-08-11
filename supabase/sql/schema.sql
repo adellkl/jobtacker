@@ -63,3 +63,17 @@ create index if not exists idx_notifications_user on public.notifications(user_i
 create index if not exists idx_notifications_unread on public.notifications(user_id, read_at);
 
 
+-- Alertes utilisateur (requêtes sauvegardées)
+create table if not exists public.alerts (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  query text,
+  filters jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now(),
+  last_run_at timestamptz,
+  last_results_count integer not null default 0
+);
+
+create index if not exists idx_alerts_user on public.alerts(user_id);
+
+

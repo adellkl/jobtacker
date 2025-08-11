@@ -34,6 +34,7 @@ const Profile = () => {
     const [isResumeModalOpen, setIsResumeModalOpen] = useState(false);
     const fileInputRef = useRef(null);
     const avatarInputRef = useRef(null);
+    const importInputRef = useRef(null);
 
     const [profileData, setProfileData] = useState({
         firstName: '',
@@ -275,6 +276,110 @@ const Profile = () => {
             skills: profileData.skills.filter(skill => skill !== skillToRemove)
         });
     };
+
+    const handleExportData = async () => {
+        try {
+            if (!user) { toast.error('Veuillez vous connecter'); return }
+            const [apps, saved, profile, alerts] = await Promise.all([
+                supabase.from('applications').select('*').eq('user_id', user.id),
+                supabase.from('saved_jobs').select('*').eq('user_id', user.id),
+                supabase.from('infouser').select('*').eq('user_id', user.id).maybeSingle(),
+                supabase.from('alerts').select('*').eq('user_id', user.id),
+            ])
+            const payload = {
+                version: 1,
+                exportedAt: new Date().toISOString(),
+                userId: user.id,
+                applications: Array.isArray(apps.data) ? apps.data : [],
+                saved_jobs: Array.isArray(saved.data) ? saved.data : [],
+                profile: profile.data || null,
+                alerts: Array.isArray(alerts.data) ? alerts.data : [],
+            }
+            const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' })
+            const url = URL.createObjectURL(blob)
+            const a = document.createElement('a')
+            const date = new Date().toISOString().slice(0, 10)
+            a.href = url
+            a.download = `jobtracker-backup-${date}.json`
+            document.body.appendChild(a)
+            a.click()
+            a.remove()
+            URL.revokeObjectURL(url)
+            toast.success('Export terminé')
+        } catch (e) {
+            toast.error('Export impossible')
+        }
+    }
+
+    const handleImportClick = () => {
+        if (importInputRef.current) importInputRef.current.click()
+    }
+
+    const handleImportFile = async (e) => {
+        try {
+            if (!user) { toast.error('Veuillez vous connecter'); return }
+            const file = e.target.files?.[0]
+            if (!file) return
+            const text = await file.text()
+            const data = JSON.parse(text)
+            // Sécurité basique
+            if (!data || typeof data !== 'object') throw new Error('Fichier invalide')
+            // Upserts
+            const apps = Array.isArray(data.applications) ? data.applications : []
+            if (apps.length) {
+                const sanitized = apps.map(a => ({
+                    id: a.id,
+                    user_id: user.id,
+                    job_id: a.job_id || a.jobId || null,
+                    job_data: a.job_data || a.jobData || {},
+                    status: a.status || 'applied',
+                    notes: a.notes || '',
+                    applied_at: a.applied_at || a.appliedAt || new Date().toISOString(),
+                }))
+                await supabase.from('applications').upsert(sanitized)
+            }
+            const saved = Array.isArray(data.saved_jobs) ? data.saved_jobs : []
+            if (saved.length) {
+                const sanitized = saved.map(s => ({
+                    user_id: user.id,
+                    job_id: s.job_id || s.jobId,
+                    job_data: s.job_data || s.jobData || {},
+                    saved_at: s.saved_at || new Date().toISOString(),
+                }))
+                await supabase.from('saved_jobs').upsert(sanitized)
+            }
+            const profile = data.profile
+            if (profile && typeof profile === 'object') {
+                const up = {
+                    user_id: user.id,
+                    full_name: profile.full_name || `${profileData.firstName} ${profileData.lastName}`.trim() || user.email,
+                    avatar_url: profile.avatar_url || null,
+                    resume_url: profile.resume_url || null,
+                    resume_filename: profile.resume_filename || null,
+                    resume_mime: profile.resume_mime || null,
+                    resume_size: profile.resume_size || null,
+                }
+                if (supportsDataColumn && profile.data) up.data = profile.data
+                await supabase.from('infouser').upsert(up)
+            }
+            const alerts = Array.isArray(data.alerts) ? data.alerts : []
+            if (alerts.length) {
+                const sanitized = alerts.map(a => ({
+                    id: a.id,
+                    user_id: user.id,
+                    query: a.query || '',
+                    filters: a.filters || {},
+                    last_run_at: a.last_run_at || null,
+                    last_results_count: a.last_results_count || 0,
+                }))
+                await supabase.from('alerts').upsert(sanitized)
+            }
+            toast.success('Import terminé')
+            e.target.value = ''
+        } catch (err) {
+            toast.error('Import impossible')
+        }
+    }
 
     // Helpers statut (couleurs/labels) utilisés dans l'onglet Statistiques
     const getStatusColor = (status) => {
@@ -589,7 +694,7 @@ const Profile = () => {
                                 )}
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                <label className="block text sm font-medium text-gray-700 mb-2">
                                     GitHub
                                 </label>
                                 {isEditing ? (
@@ -655,7 +760,21 @@ const Profile = () => {
                                         <input
                                             type="checkbox"
                                             checked={value}
-                                            onChange={(e) => setPreferences({ ...preferences, [key]: e.target.checked })}
+                                            onChange={async (e) => {
+                                                const next = { ...preferences, [key]: e.target.checked }
+                                                setPreferences(next)
+                                                // Persister immédiatement dans infouser.data.preferences
+                                                try {
+                                                    const { data: current } = await supabase
+                                                        .from('infouser')
+                                                        .select('data')
+                                                        .eq('user_id', user.id)
+                                                        .maybeSingle()
+                                                    const currentData = (current && current.data) || {}
+                                                    const payload = { ...currentData, preferences: next }
+                                                    await supabase.from('infouser').upsert({ user_id: user.id, data: payload })
+                                                } catch { }
+                                            }}
                                             className="sr-only peer"
                                         />
                                         <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
@@ -668,15 +787,19 @@ const Profile = () => {
                     <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
                         <h3 className="text-lg font-semibold text-gray-900 mb-4">Actions</h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <button className="flex items-center justify-center space-x-2 px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
+                            <button onClick={handleExportData} className="flex items-center justify-center space-x-2 px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
                                 <Download className="w-5 h-5" />
                                 <span>Exporter mes données</span>
                             </button>
-                            <button className="flex items-center justify-center space-x-2 px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
-                                <Upload className="w-5 h-5" />
-                                <span>Importer des données</span>
-                            </button>
+                            <div className="flex items-center justify-center">
+                                <input ref={importInputRef} type="file" accept="application/json" className="hidden" onChange={handleImportFile} />
+                                <button onClick={handleImportClick} className="flex items-center justify-center space-x-2 px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
+                                    <Upload className="w-5 h-5" />
+                                    <span>Importer des données</span>
+                                </button>
+                            </div>
                         </div>
+                        <p className="mt-2 text-xs text-gray-500">Export en JSON. L\'import fusionne vos données (upsert).</p>
                     </div>
                 </motion.div>
             )}

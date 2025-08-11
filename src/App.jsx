@@ -12,9 +12,11 @@ import JobSearch from './pages/JobSearch';
 import Applications from './pages/Applications';
 import Profile from './pages/Profile';
 import Stats from './pages/Stats';
+import Favorites from './pages/Favorites';
 import { JobProvider } from './context/JobContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { NotificationProvider } from './context/NotificationContext';
+import { AlertsProvider } from './context/AlertsContext';
 import Login from './pages/Login';
 
 function PrivateRoute({ children }) {
@@ -43,83 +45,95 @@ function App() {
         <AuthProvider>
             <NotificationProvider>
                 <JobProvider>
-                    <div className="min-h-screen bg-gray-50 overflow-x-hidden">
-                        <Helmet>
-                            <title>JobTracker</title>
-                            <link rel="canonical" href={window.location.href} />
-                        </Helmet>
-                        <Navbar />
-                        <main className="pt-16">
-                            <AnimatePresence mode="wait" initial={false}>
-                                <Routes location={location} key={location.pathname}>
-                                    <Route path="/login" element={<PageTransition><Login /></PageTransition>} />
-                                    <Route
-                                        path="/"
-                                        element={
-                                            <PageTransition>
-                                                <PrivateRoute>
-                                                    <Dashboard />
-                                                </PrivateRoute>
-                                            </PageTransition>
-                                        }
-                                    />
-                                    <Route path="/preview" element={<PageTransition><Preview /></PageTransition>} />
-                                    <Route path="*" element={<PageTransition><NotFound /></PageTransition>} />
-                                    <Route
-                                        path="/search"
-                                        element={
-                                            <PageTransition>
-                                                <PrivateRoute>
-                                                    <JobSearch />
-                                                </PrivateRoute>
-                                            </PageTransition>
-                                        }
-                                    />
-                                    <Route
-                                        path="/applications"
-                                        element={
-                                            <PageTransition>
-                                                <PrivateRoute>
-                                                    <Applications />
-                                                </PrivateRoute>
-                                            </PageTransition>
-                                        }
-                                    />
-                                    <Route
-                                        path="/profile"
-                                        element={
-                                            <PageTransition>
-                                                <PrivateRoute>
-                                                    <Profile />
-                                                </PrivateRoute>
-                                            </PageTransition>
-                                        }
-                                    />
-                                    <Route
-                                        path="/stats"
-                                        element={
-                                            <PageTransition>
-                                                <PrivateRoute>
-                                                    <Stats />
-                                                </PrivateRoute>
-                                            </PageTransition>
-                                        }
-                                    />
-                                </Routes>
-                            </AnimatePresence>
-                        </main>
-                        {!hideFooter && <Footer />}
-                        <Toaster
-                            position="top-right"
-                            toastOptions={{
-                                duration: 4000,
-                                style: {
-                                    background: '#363636',
-                                    color: '#fff',
-                                },
-                            }}
-                        />
-                    </div>
+                    <AlertsProvider>
+                        <div className="min-h-screen flex flex-col bg-gray-50 overflow-x-hidden">
+                            <Helmet>
+                                <title>JobTracker</title>
+                                <link rel="canonical" href={window.location.href} />
+                            </Helmet>
+                            <Navbar />
+                            <main className="flex-1 pt-16">
+                                <AnimatePresence mode="wait" initial={false}>
+                                    <Routes location={location} key={location.pathname}>
+                                        <Route path="/login" element={<PageTransition><Login /></PageTransition>} />
+                                        <Route
+                                            path="/"
+                                            element={
+                                                <PageTransition>
+                                                    <PrivateRoute>
+                                                        <Dashboard />
+                                                    </PrivateRoute>
+                                                </PageTransition>
+                                            }
+                                        />
+                                        <Route path="/preview" element={<PageTransition><Preview /></PageTransition>} />
+                                        <Route path="*" element={<PageTransition><NotFound /></PageTransition>} />
+                                        <Route
+                                            path="/search"
+                                            element={
+                                                <PageTransition>
+                                                    <PrivateRoute>
+                                                        <JobSearch />
+                                                    </PrivateRoute>
+                                                </PageTransition>
+                                            }
+                                        />
+                                        <Route
+                                            path="/applications"
+                                            element={
+                                                <PageTransition>
+                                                    <PrivateRoute>
+                                                        <Applications />
+                                                    </PrivateRoute>
+                                                </PageTransition>
+                                            }
+                                        />
+                                        <Route
+                                            path="/favorites"
+                                            element={
+                                                <PageTransition>
+                                                    <PrivateRoute>
+                                                        <Favorites />
+                                                    </PrivateRoute>
+                                                </PageTransition>
+                                            }
+                                        />
+                                        <Route
+                                            path="/profile"
+                                            element={
+                                                <PageTransition>
+                                                    <PrivateRoute>
+                                                        <Profile />
+                                                    </PrivateRoute>
+                                                </PageTransition>
+                                            }
+                                        />
+                                        <Route
+                                            path="/stats"
+                                            element={
+                                                <PageTransition>
+                                                    <PrivateRoute>
+                                                        <Stats />
+                                                    </PrivateRoute>
+                                                </PageTransition>
+                                            }
+                                        />
+                                    </Routes>
+                                </AnimatePresence>
+                            </main>
+                            {!hideFooter && <Footer />}
+                            <Toaster
+                                position="top-right"
+                                toastOptions={{
+                                    duration: 4000,
+                                    style: {
+                                        background: '#363636',
+                                        color: '#fff',
+                                    },
+                                }}
+                            />
+                        </div>
+                    </AlertsProvider>
                 </JobProvider>
             </NotificationProvider>
         </AuthProvider>

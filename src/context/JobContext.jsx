@@ -185,7 +185,34 @@ export const JobProvider = ({ children }) => {
 
     const updateApplicationNotes = async (id, notes) => {
         dispatch({ type: 'UPDATE_APPLICATION_NOTES', payload: { id, notes } });
-        if (user) await supabase.from('applications').update({ notes }).eq('id', id).eq('user_id', user.id);
+        if (user) {
+            const { data, error } = await supabase
+                .from('applications')
+                .update({ notes })
+                .eq('id', id)
+                .eq('user_id', user.id)
+                .select('id');
+            if (error) {
+                console.error('Erreur mise à jour des notes:', error);
+                return;
+            }
+            if (!data || data.length === 0) {
+                const app = (state.applications || []).find(a => a.id === id);
+                if (app) {
+                    const upsertPayload = {
+                        id: app.id,
+                        user_id: user.id,
+                        job_id: app.jobId || null,
+                        job_data: app.jobData || {},
+                        status: app.status || 'applied',
+                        notes,
+                        applied_at: app.appliedAt || new Date().toISOString(),
+                    };
+                    const { error: upErr } = await supabase.from('applications').upsert(upsertPayload);
+                    if (upErr) console.error('Erreur upsert des notes:', upErr);
+                }
+            }
+        }
     };
 
     const setFilters = (filters) => {

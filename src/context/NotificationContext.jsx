@@ -8,6 +8,17 @@ export const NotificationProvider = ({ children }) => {
     const { user } = useAuth();
     const [notifications, setNotifications] = useState([]);
     const [unreadCount, setUnreadCount] = useState(0);
+    const [prefs, setPrefs] = useState({})
+
+    useEffect(() => {
+        const loadPrefs = async () => {
+            if (!user) { setPrefs({}); return }
+            const { data } = await supabase.from('infouser').select('data').eq('user_id', user.id).maybeSingle()
+            const p = (data && data.data && data.data.preferences) || {}
+            setPrefs(p)
+        }
+        loadPrefs()
+    }, [user?.id])
 
     useEffect(() => {
         let channel;
@@ -18,33 +29,43 @@ export const NotificationProvider = ({ children }) => {
                 .select('*')
                 .eq('user_id', user.id)
                 .order('created_at', { ascending: false });
-            if (!error) {
+            if (!error && Array.isArray(data)) {
                 setNotifications(data);
-                setUnreadCount(data.filter(n => !n.read_at).length);
+            } else {
+                setNotifications([])
             }
             channel = supabase.channel('notif_changes')
                 .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` }, (payload) => {
-                    if (payload.eventType === 'INSERT') {
-                        setNotifications(prev => [payload.new, ...prev]);
-                    } else if (payload.eventType === 'UPDATE') {
-                        setNotifications(prev => prev.map(n => n.id === payload.new.id ? payload.new : n));
-                    } else if (payload.eventType === 'DELETE') {
-                        setNotifications(prev => prev.filter(n => n.id !== payload.old.id));
-                    }
-                    setUnreadCount(prev => {
-                        const list = (payload.eventType === 'INSERT') ? [payload.new, ...notifications] : notifications;
-                        return list.filter(n => !n.read_at).length;
+                    setNotifications((prev) => {
+                        const shouldKeep = (n) => {
+                            if (n.type === 'alert' && prefs.jobAlerts === false) return false
+                            return true
+                        }
+                        if (payload.eventType === 'INSERT') {
+                            const next = [payload.new, ...prev]
+                            return next.filter(shouldKeep)
+                        }
+                        if (payload.eventType === 'UPDATE') return prev.map(n => n.id === payload.new.id ? payload.new : n)
+                        if (payload.eventType === 'DELETE') return prev.filter(n => n.id !== payload.old.id)
+                        return prev
                     });
                 })
                 .subscribe();
         };
         load();
         return () => { if (channel) supabase.removeChannel(channel); };
-    }, [user?.id]);
+    }, [user?.id, prefs.jobAlerts]);
+
+    useEffect(() => {
+        setUnreadCount((notifications || []).filter(n => !n.read_at).length);
+    }, [notifications]);
 
     const markAllRead = async () => {
         if (!user) return;
-        await supabase.from('notifications').update({ read_at: new Date().toISOString() }).eq('user_id', user.id).is('read_at', null);
+        setNotifications((prev) => prev.map(n => n.read_at ? n : { ...n, read_at: new Date().toISOString() }));
+        try {
+            await supabase.from('notifications').update({ read_at: new Date().toISOString() }).eq('user_id', user.id).is('read_at', null);
+        } catch {}
     };
 
     const value = { notifications, unreadCount, markAllRead };

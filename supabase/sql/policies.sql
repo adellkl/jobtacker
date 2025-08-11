@@ -3,6 +3,7 @@
 alter table public.profiles enable row level security;
 alter table public.applications enable row level security;
 alter table public.saved_jobs enable row level security;
+alter table public.alerts enable row level security;
 
 -- Idempotence: supprimer avant de créer
 drop policy if exists "Read own profile" on public.profiles;
@@ -53,6 +54,21 @@ create policy "Read own saved jobs" on public.saved_jobs
 create policy "Upsert own saved jobs" on public.saved_jobs
   for insert with check (auth.uid() = user_id);
 create policy "Delete own saved jobs" on public.saved_jobs
+  for delete using (auth.uid() = user_id);
+
+-- Alerts policies
+drop policy if exists "Read own alerts" on public.alerts;
+drop policy if exists "Insert own alerts" on public.alerts;
+drop policy if exists "Update own alerts" on public.alerts;
+drop policy if exists "Delete own alerts" on public.alerts;
+
+create policy "Read own alerts" on public.alerts
+  for select using (auth.uid() = user_id);
+create policy "Insert own alerts" on public.alerts
+  for insert with check (auth.uid() = user_id);
+create policy "Update own alerts" on public.alerts
+  for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
+create policy "Delete own alerts" on public.alerts
   for delete using (auth.uid() = user_id);
 
 

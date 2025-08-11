@@ -22,6 +22,152 @@ import { formatDistanceToNow, format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import toast from 'react-hot-toast';
 
+// Helpers extraits hors composant pour ne pas être recréés à chaque rendu
+const getStatusColor = (status) => {
+    switch (status) {
+        case 'applied': return 'bg-yellow-100 text-yellow-800';
+        case 'accepted': return 'bg-green-100 text-green-800';
+        case 'rejected': return 'bg-red-100 text-red-800';
+        case 'interview': return 'bg-blue-100 text-blue-800';
+        default: return 'bg-gray-100 text-gray-800';
+    }
+};
+
+const getStatusLabel = (status) => {
+    switch (status) {
+        case 'applied': return 'Candidature envoyée';
+        case 'accepted': return 'Acceptée';
+        case 'rejected': return 'Refusée';
+        case 'interview': return 'Entretien';
+        default: return 'Inconnu';
+    }
+};
+
+// Composant séparé et stable pour éviter les remounts à chaque frappe
+const ApplicationCard = ({
+    application,
+    isActive,
+    onEditNotes,
+    onDelete,
+    onChangeStatus,
+    showNotes,
+    noteTexts,
+    setNoteTexts,
+    onCancelNotes,
+    onSaveNotes,
+}) => (
+    <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow"
+    >
+        <div className="flex justify-between items-start mb-4">
+            <div className="flex-1">
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                    {application.jobData?.title || 'Poste non spécifié'}
+                </h3>
+                <div className="flex items-center space-x-4 text-sm text-gray-600 mb-3">
+                    <div className="flex items-center space-x-1">
+                        <Building className="w-4 h-4" />
+                        <span>{application.jobData?.company || 'Entreprise non spécifiée'}</span>
+                    </div>
+                    <div className="flex items-center space-x-1">
+                        <MapPin className="w-4 h-4" />
+                        <span>{application.jobData?.location || 'Localisation non spécifiée'}</span>
+                    </div>
+                </div>
+            </div>
+            <div className="flex items-center space-x-2">
+                <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(application.status)}`}>
+                    {getStatusLabel(application.status)}
+                </span>
+                <button className="p-2 text-gray-400 hover:text-gray-600 transition-colors">
+                    <MoreVertical className="w-4 h-4" />
+                </button>
+            </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4 mb-4 text-sm text-gray-600">
+            <div className="flex items-center space-x-2">
+                <Calendar className="w-4 h-4" />
+                <span>Postulé le {format(new Date(application.appliedAt), 'dd/MM/yyyy', { locale: fr })}</span>
+            </div>
+            <div className="flex items-center space-x-2">
+                <Clock className="w-4 h-4" />
+                <span>Il y a {formatDistanceToNow(new Date(application.appliedAt), { locale: fr })}</span>
+            </div>
+        </div>
+
+        {application.notes && (
+            <div className="mb-4 p-3 bg-gray-50 rounded-lg">
+                <p className="text-sm text-gray-700 whitespace-pre-wrap break-words">{application.notes}</p>
+            </div>
+        )}
+
+        <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+                <button
+                    onClick={() => onEditNotes(application.id)}
+                    className="text-blue-600 hover:text-blue-700 text-sm font-medium flex items-center space-x-1"
+                >
+                    <Edit className="w-4 h-4" />
+                    <span>{application.notes ? 'Modifier' : 'Ajouter'} des notes</span>
+                </button>
+            </div>
+            <div className="flex items-center space-x-2">
+                <select
+                    value={application.status}
+                    onChange={(e) => onChangeStatus(application.id, e.target.value)}
+                    className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                >
+                    <option value="applied">Candidature envoyée</option>
+                    <option value="interview">Entretien</option>
+                    <option value="accepted">Acceptée</option>
+                    <option value="rejected">Refusée</option>
+                </select>
+                <button
+                    onClick={() => onDelete(application.id)}
+                    className="p-2 text-red-400 hover:text-red-600 transition-colors"
+                    title="Supprimer cette candidature"
+                >
+                    <Trash2 className="w-4 h-4" />
+                </button>
+            </div>
+        </div>
+
+        {showNotes[application.id] && (
+            <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                className="mt-4"
+            >
+                <textarea
+                    placeholder="Ajoutez vos notes sur cette candidature..."
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                    rows="5"
+                    value={noteTexts[application.id] || ''}
+                    onChange={(e) => setNoteTexts({ ...noteTexts, [application.id]: e.target.value })}
+                />
+                <div className="flex justify-end space-x-2 mt-2">
+                    <button
+                        onClick={() => onCancelNotes(application.id)}
+                        className="px-3 py-1 text-gray-600 hover:text-gray-800 text-sm"
+                    >
+                        Annuler
+                    </button>
+                    <button
+                        onClick={() => onSaveNotes(application.id)}
+                        className="px-3 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm"
+                    >
+                        Sauvegarder
+                    </button>
+                </div>
+            </motion.div>
+        )}
+    </motion.div>
+);
+
 const Applications = () => {
     const { applications, updateApplicationStatus, deleteApplication, updateApplicationNotes } = useJobContext();
     const [searchQuery, setSearchQuery] = useState('');
@@ -40,25 +186,7 @@ const Applications = () => {
         { value: 'rejected', label: 'Refusée', color: 'red' }
     ];
 
-    const getStatusColor = (status) => {
-        switch (status) {
-            case 'applied': return 'bg-yellow-100 text-yellow-800';
-            case 'accepted': return 'bg-green-100 text-green-800';
-            case 'rejected': return 'bg-red-100 text-red-800';
-            case 'interview': return 'bg-blue-100 text-blue-800';
-            default: return 'bg-gray-100 text-gray-800';
-        }
-    };
-
-    const getStatusLabel = (status) => {
-        switch (status) {
-            case 'applied': return 'Candidature envoyée';
-            case 'accepted': return 'Acceptée';
-            case 'rejected': return 'Refusée';
-            case 'interview': return 'Entretien';
-            default: return 'Inconnu';
-        }
-    };
+    const isActive = (path) => false; // non utilisé ici mais laissé pour cohérence éventuelle
 
     const handleStatusChange = (applicationId, newStatus) => {
         updateApplicationStatus(applicationId, newStatus);
@@ -110,119 +238,6 @@ const Applications = () => {
         groups[status].push(app);
         return groups;
     }, {});
-
-    const ApplicationCard = ({ application }) => (
-        <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow"
-        >
-            <div className="flex justify-between items-start mb-4">
-                <div className="flex-1">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                        {application.jobData?.title || 'Poste non spécifié'}
-                    </h3>
-                    <div className="flex items-center space-x-4 text-sm text-gray-600 mb-3">
-                        <div className="flex items-center space-x-1">
-                            <Building className="w-4 h-4" />
-                            <span>{application.jobData?.company || 'Entreprise non spécifiée'}</span>
-                        </div>
-                        <div className="flex items-center space-x-1">
-                            <MapPin className="w-4 h-4" />
-                            <span>{application.jobData?.location || 'Localisation non spécifiée'}</span>
-                        </div>
-                    </div>
-                </div>
-                <div className="flex items-center space-x-2">
-                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(application.status)}`}>
-                        {getStatusLabel(application.status)}
-                    </span>
-                    <button className="p-2 text-gray-400 hover:text-gray-600 transition-colors">
-                        <MoreVertical className="w-4 h-4" />
-                    </button>
-                </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4 mb-4">
-                <div className="flex items-center space-x-2 text-sm text-gray-600">
-                    <Calendar className="w-4 h-4" />
-                    <span>Postulé le {format(new Date(application.appliedAt), 'dd/MM/yyyy', { locale: fr })}</span>
-                </div>
-                <div className="flex items-center space-x-2 text-sm text-gray-600">
-                    <Clock className="w-4 h-4" />
-                    <span>Il y a {formatDistanceToNow(new Date(application.appliedAt), { locale: fr })}</span>
-                </div>
-            </div>
-
-            {application.notes && (
-                <div className="mb-4 p-3 bg-gray-50 rounded-lg">
-                    <p className="text-sm text-gray-700">{application.notes}</p>
-                </div>
-            )}
-
-            <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                    <button
-                        onClick={() => handleEditNotes(application.id)}
-                        className="text-blue-600 hover:text-blue-700 text-sm font-medium flex items-center space-x-1"
-                    >
-                        <Edit className="w-4 h-4" />
-                        <span>{application.notes ? 'Modifier' : 'Ajouter'} des notes</span>
-                    </button>
-                </div>
-                <div className="flex items-center space-x-2">
-                    <select
-                        value={application.status}
-                        onChange={(e) => handleStatusChange(application.id, e.target.value)}
-                        className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                    >
-                        <option value="applied">Candidature envoyée</option>
-                        <option value="interview">Entretien</option>
-                        <option value="accepted">Acceptée</option>
-                        <option value="rejected">Refusée</option>
-                    </select>
-                    <button
-                        onClick={() => handleDeleteApplication(application.id)}
-                        className="p-2 text-red-400 hover:text-red-600 transition-colors"
-                        title="Supprimer cette candidature"
-                    >
-                        <Trash2 className="w-4 h-4" />
-                    </button>
-                </div>
-            </div>
-
-            {showNotes[application.id] && (
-                <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: 'auto' }}
-                    exit={{ opacity: 0, height: 0 }}
-                    className="mt-4"
-                >
-                    <textarea
-                        placeholder="Ajoutez vos notes sur cette candidature..."
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-                        rows="3"
-                        value={noteTexts[application.id] || ''}
-                        onChange={(e) => setNoteTexts({ ...noteTexts, [application.id]: e.target.value })}
-                    />
-                    <div className="flex justify-end space-x-2 mt-2">
-                        <button
-                            onClick={() => handleCancelNotes(application.id)}
-                            className="px-3 py-1 text-gray-600 hover:text-gray-800 text-sm"
-                        >
-                            Annuler
-                        </button>
-                        <button
-                            onClick={() => handleSaveNotes(application.id)}
-                            className="px-3 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm"
-                        >
-                            Sauvegarder
-                        </button>
-                    </div>
-                </motion.div>
-            )}
-        </motion.div>
-    );
 
     return (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -296,7 +311,6 @@ const Applications = () => {
                                 <select
                                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                     onChange={(e) => {
-                                        // Logique de filtrage par date à implémenter
                                         console.log('Filtre date:', e.target.value);
                                     }}
                                 >
@@ -316,7 +330,6 @@ const Applications = () => {
                                     placeholder="Filtrer par entreprise..."
                                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                     onChange={(e) => {
-                                        // Logique de filtrage par entreprise à implémenter
                                         console.log('Filtre entreprise:', e.target.value);
                                     }}
                                 />
@@ -330,7 +343,6 @@ const Applications = () => {
                                     placeholder="Filtrer par localisation..."
                                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                     onChange={(e) => {
-                                        // Logique de filtrage par localisation à implémenter
                                         console.log('Filtre localisation:', e.target.value);
                                     }}
                                 />
@@ -426,7 +438,19 @@ const Applications = () => {
                             </h2>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 {apps.map((app) => (
-                                    <ApplicationCard key={app.id} application={app} />
+                                    <ApplicationCard
+                                        key={app.id}
+                                        application={app}
+                                        isActive={isActive}
+                                        onEditNotes={handleEditNotes}
+                                        onDelete={handleDeleteApplication}
+                                        onChangeStatus={handleStatusChange}
+                                        showNotes={showNotes}
+                                        noteTexts={noteTexts}
+                                        setNoteTexts={setNoteTexts}
+                                        onCancelNotes={handleCancelNotes}
+                                        onSaveNotes={handleSaveNotes}
+                                    />
                                 ))}
                             </div>
                         </div>
