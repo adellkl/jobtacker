@@ -65,7 +65,7 @@ export const NotificationProvider = ({ children }) => {
         setNotifications((prev) => prev.map(n => n.read_at ? n : { ...n, read_at: new Date().toISOString() }));
         try {
             await supabase.from('notifications').update({ read_at: new Date().toISOString() }).eq('user_id', user.id).is('read_at', null);
-        } catch {}
+        } catch { }
     };
 
     const value = { notifications, unreadCount, markAllRead };
