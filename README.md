@@ -99,7 +99,40 @@ src/
 
 ## 🔧 Configuration
 
-L'application utilise le localStorage pour sauvegarder vos données localement. Aucune configuration externe n'est requise.
+L'application utilise Supabase pour l'authentification et le stockage. Vous devez renseigner les variables d'environnement suivantes.
+
+### Variables requises
+
+```
+VITE_SUPABASE_URL=https://<votre-projet>.supabase.co
+VITE_SUPABASE_ANON_KEY=eyJ<cle_anon_publique>
+
+# Optionnel (API emplois)
+VITE_RAPIDAPI_KEY=<votre_cle_rapidapi>
+# Optionnel (serveur local agrégateur)
+RAPIDAPI_KEY=<votre_cle_rapidapi>
+API_PORT=5175
+```
+
+### Configuration en local
+
+1. Copiez le fichier `.env.example` en `.env` à la racine du projet
+2. Remplissez `VITE_SUPABASE_URL` et `VITE_SUPABASE_ANON_KEY` depuis Supabase:
+   - Supabase → Settings → API → Project URL et anon public
+3. (Optionnel) Ajoutez `VITE_RAPIDAPI_KEY` si vous utilisez la recherche d'emplois JSearch
+4. Redémarrez le serveur de dev: `npm run dev`
+
+### Déploiement sur Vercel
+
+1. Vercel → Project → Settings → Environment Variables
+2. Ajoutez exactement (sensible à la casse):
+   - `VITE_SUPABASE_URL` = URL du projet Supabase
+   - `VITE_SUPABASE_ANON_KEY` = clé anon publique
+   - (Optionnel) `VITE_RAPIDAPI_KEY`
+3. Choisissez les environnements "Production" et "Preview"
+4. Redeployez le projet (bouton Redeploy)
+
+Après déploiement, l'erreur « Configuration Supabase manquante... » disparaît si les variables sont bien définies.
 
 ## 🎯 Fonctionnalités à Venir
 

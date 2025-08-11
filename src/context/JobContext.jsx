@@ -117,6 +117,7 @@ export const JobProvider = ({ children }) => {
                         notes: r.notes,
                         appliedAt: r.applied_at,
                         followUpDate: r.follow_up_date || null,
+
                     }));
                     dispatch({ type: 'SET_APPLICATIONS', payload: mapped });
                 }
