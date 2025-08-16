@@ -8,7 +8,7 @@ import Footer from './components/Footer';
 import Dashboard from './pages/Dashboard';
 import Preview from './pages/Preview';
 import NotFound from './pages/NotFound';
-import JobSearch from './pages/JobSearch';
+
 import Applications from './pages/Applications';
 import Profile from './pages/Profile';
 import Stats from './pages/Stats';
@@ -68,18 +68,9 @@ function App() {
                                         />
                                         <Route path="/preview" element={<PageTransition><Preview /></PageTransition>} />
                                         <Route path="*" element={<PageTransition><NotFound /></PageTransition>} />
+
                                         <Route
-                                            path="/search"
-                                            element={
-                                                <PageTransition>
-                                                    <PrivateRoute>
-                                                        <JobSearch />
-                                                    </PrivateRoute>
-                                                </PageTransition>
-                                            }
-                                        />
-                                        <Route
-                                            path="/applications"
+                                            path="/candidatures"
                                             element={
                                                 <PageTransition>
                                                     <PrivateRoute>

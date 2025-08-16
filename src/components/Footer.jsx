@@ -4,8 +4,8 @@ import { Github, Linkedin, Mail } from 'lucide-react';
 const Footer = () => {
     const links = [
         { label: 'Accueil', href: '/' },
-        { label: 'Recherche', href: '/search' },
-        { label: 'Candidatures', href: '/applications' },
+        // { label: 'Recherche', href: '/search' },
+        { label: 'Candidatures', href: '/candidatures' },
         { label: 'Profil', href: '/profile' },
     ];
 

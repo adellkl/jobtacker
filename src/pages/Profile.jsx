@@ -2,20 +2,10 @@ import React, { useEffect, useState, useRef } from 'react';
 import { motion } from 'framer-motion';
 import {
     User,
-    Mail,
-    Phone,
-    MapPin,
     Briefcase,
     Edit,
     Save,
-    X,
-    Download,
-    Upload,
-    Settings,
-    Bell,
-    Shield,
-    HelpCircle,
-    LogOut
+    X
 } from 'lucide-react';
 import { useJobContext } from '../context/JobContext';
 import { useAuth } from '../context/AuthContext';
@@ -34,7 +24,7 @@ const Profile = () => {
     const [isResumeModalOpen, setIsResumeModalOpen] = useState(false);
     const fileInputRef = useRef(null);
     const avatarInputRef = useRef(null);
-    const importInputRef = useRef(null);
+    // supprimé: importInputRef
 
     const [profileData, setProfileData] = useState({
         firstName: '',
@@ -52,13 +42,7 @@ const Profile = () => {
     });
     const [supportsDataColumn, setSupportsDataColumn] = useState(null);
 
-    const [preferences, setPreferences] = useState({
-        emailNotifications: true,
-        pushNotifications: false,
-        weeklyReports: true,
-        jobAlerts: true,
-        privacyMode: false
-    });
+    // Préférences supprimées
 
     useEffect(() => {
         const checkAndLoad = async () => {
@@ -93,7 +77,7 @@ const Profile = () => {
                         github: details.github || '',
                         website: details.website || ''
                     });
-                    if (details.preferences) setPreferences(prev => ({ ...prev, ...details.preferences }));
+                    // Préférences supprimées
                     if (data.resume_url) setResumePath(data.resume_url);
                     if (data.avatar_url) {
                         setAvatarPath(data.avatar_url);
@@ -141,7 +125,6 @@ const Profile = () => {
 
     const tabs = [
         { id: 'profile', label: 'Profil', icon: User },
-        { id: 'preferences', label: 'Préférences', icon: Settings },
         { id: 'stats', label: 'Statistiques', icon: Briefcase }
     ];
 
@@ -160,7 +143,6 @@ const Profile = () => {
             linkedin: profileData.linkedin,
             github: profileData.github,
             website: profileData.website,
-            preferences,
         };
         const upsertPayload = {
             user_id: user.id,
@@ -277,109 +259,7 @@ const Profile = () => {
         });
     };
 
-    const handleExportData = async () => {
-        try {
-            if (!user) { toast.error('Veuillez vous connecter'); return }
-            const [apps, saved, profile, alerts] = await Promise.all([
-                supabase.from('applications').select('*').eq('user_id', user.id),
-                supabase.from('saved_jobs').select('*').eq('user_id', user.id),
-                supabase.from('infouser').select('*').eq('user_id', user.id).maybeSingle(),
-                supabase.from('alerts').select('*').eq('user_id', user.id),
-            ])
-            const payload = {
-                version: 1,
-                exportedAt: new Date().toISOString(),
-                userId: user.id,
-                applications: Array.isArray(apps.data) ? apps.data : [],
-                saved_jobs: Array.isArray(saved.data) ? saved.data : [],
-                profile: profile.data || null,
-                alerts: Array.isArray(alerts.data) ? alerts.data : [],
-            }
-            const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' })
-            const url = URL.createObjectURL(blob)
-            const a = document.createElement('a')
-            const date = new Date().toISOString().slice(0, 10)
-            a.href = url
-            a.download = `jobtracker-backup-${date}.json`
-            document.body.appendChild(a)
-            a.click()
-            a.remove()
-            URL.revokeObjectURL(url)
-            toast.success('Export terminé')
-        } catch (e) {
-            toast.error('Export impossible')
-        }
-    }
-
-    const handleImportClick = () => {
-        if (importInputRef.current) importInputRef.current.click()
-    }
-
-    const handleImportFile = async (e) => {
-        try {
-            if (!user) { toast.error('Veuillez vous connecter'); return }
-            const file = e.target.files?.[0]
-            if (!file) return
-            const text = await file.text()
-            const data = JSON.parse(text)
-            // Sécurité basique
-            if (!data || typeof data !== 'object') throw new Error('Fichier invalide')
-            // Upserts
-            const apps = Array.isArray(data.applications) ? data.applications : []
-            if (apps.length) {
-                const sanitized = apps.map(a => ({
-                    id: a.id,
-                    user_id: user.id,
-                    job_id: a.job_id || a.jobId || null,
-                    job_data: a.job_data || a.jobData || {},
-                    status: a.status || 'applied',
-                    notes: a.notes || '',
-                    applied_at: a.applied_at || a.appliedAt || new Date().toISOString(),
-                }))
-                await supabase.from('applications').upsert(sanitized)
-            }
-            const saved = Array.isArray(data.saved_jobs) ? data.saved_jobs : []
-            if (saved.length) {
-                const sanitized = saved.map(s => ({
-                    user_id: user.id,
-                    job_id: s.job_id || s.jobId,
-                    job_data: s.job_data || s.jobData || {},
-                    saved_at: s.saved_at || new Date().toISOString(),
-                }))
-                await supabase.from('saved_jobs').upsert(sanitized)
-            }
-            const profile = data.profile
-            if (profile && typeof profile === 'object') {
-                const up = {
-                    user_id: user.id,
-                    full_name: profile.full_name || `${profileData.firstName} ${profileData.lastName}`.trim() || user.email,
-                    avatar_url: profile.avatar_url || null,
-                    resume_url: profile.resume_url || null,
-                    resume_filename: profile.resume_filename || null,
-                    resume_mime: profile.resume_mime || null,
-                    resume_size: profile.resume_size || null,
-                }
-                if (supportsDataColumn && profile.data) up.data = profile.data
-                await supabase.from('infouser').upsert(up)
-            }
-            const alerts = Array.isArray(data.alerts) ? data.alerts : []
-            if (alerts.length) {
-                const sanitized = alerts.map(a => ({
-                    id: a.id,
-                    user_id: user.id,
-                    query: a.query || '',
-                    filters: a.filters || {},
-                    last_run_at: a.last_run_at || null,
-                    last_results_count: a.last_results_count || 0,
-                }))
-                await supabase.from('alerts').upsert(sanitized)
-            }
-            toast.success('Import terminé')
-            e.target.value = ''
-        } catch (err) {
-            toast.error('Import impossible')
-        }
-    }
+    // Supprimé: export/import
 
     // Helpers statut (couleurs/labels) utilisés dans l'onglet Statistiques
     const getStatusColor = (status) => {
@@ -437,7 +317,7 @@ const Profile = () => {
                     Mon Profil
                 </h1>
                 <p className="text-gray-600">
-                    Gérez vos informations personnelles et vos préférences
+                    Gérez vos informations personnelles et vos documents
                 </p>
             </div>
 
@@ -881,11 +761,4 @@ const Profile = () => {
 
 export default Profile;
 
-// Modal CV
-// Ajout d'un modal simple affichant l'iframe PDF si disponible
-// (intégré en bas du fichier pour rester autonome)
-/* eslint-disable react/no-danger */
-
-// Inject modal rendering inside component return (placed after export for clarity in this file)
-// NOTE: The modal is controlled via isResumeModalOpen and resumeUrl within the component above.
 

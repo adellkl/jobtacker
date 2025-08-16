@@ -9,23 +9,19 @@ import {
     Menu,
     X,
     Briefcase,
-    Bell,
     LogOut,
     Bookmark
 } from 'lucide-react';
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../context/AuthContext';
-import { useNotifications } from '../context/NotificationContext';
 import { useJobContext } from '../context/JobContext';
 
 const Navbar = () => {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const location = useLocation();
     const { user } = useAuth();
-    const { notifications, unreadCount, markAllRead } = useNotifications();
     const { savedJobIds } = useJobContext();
     const favoritesCount = Array.isArray(savedJobIds) ? savedJobIds.length : 0;
-    const [openPanel, setOpenPanel] = useState(false);
     const [avatarUrl, setAvatarUrl] = useState(null);
 
     useEffect(() => {
@@ -55,29 +51,16 @@ const Navbar = () => {
     const isPreview = location.pathname === '/preview';
     const isLogin = location.pathname.startsWith('/login');
     const isAuthenticated = Boolean(user);
-    const showPreview = !isAuthenticated && (!isPreview || isLogin);
+    const showPreview = !isAuthenticated;
 
-    const navItems = isLogin
-        ? []
-        : isPreview
-            ? (
-                isAuthenticated
-                    ? [
-                        { path: '/', label: 'Tableau de bord', icon: Home },
-                        { path: '/search', label: 'Recherche', icon: Search },
-                        { path: '/applications', label: 'Candidatures', icon: FileText },
-                        { path: '/favorites', label: 'Favoris', icon: Bookmark },
-                        { path: '/profile', label: 'Profil', icon: User },
-                    ]
-                    : []
-            )
-            : [
-                { path: '/', label: 'Tableau de bord', icon: Home },
-                { path: '/search', label: 'Recherche', icon: Search },
-                { path: '/applications', label: 'Candidatures', icon: FileText },
-                { path: '/favorites', label: 'Favoris', icon: Bookmark },
-                { path: '/profile', label: 'Profil', icon: User },
-            ];
+    const navItems = isAuthenticated
+        ? [
+            { path: '/', label: 'Tableau de bord', icon: Home },
+            { path: '/candidatures', label: 'Candidatures', icon: FileText },
+            { path: '/favorites', label: 'Favoris', icon: Bookmark },
+            { path: '/profile', label: 'Profil', icon: User },
+        ]
+        : [];
 
     const isActive = (path) => location.pathname === path;
 
@@ -141,20 +124,7 @@ const Navbar = () => {
                                 Preview
                             </Link>
                         )}
-                        {isAuthenticated && (
-                            <button
-                                className="relative p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
-                                onClick={() => setOpenPanel((v) => !v)}
-                                aria-label="Notifications"
-                            >
-                                <Bell className="w-5 h-5" />
-                                {unreadCount > 0 && (
-                                    <span className="absolute -top-0.5 -right-0.5 inline-flex items-center justify-center min-w-[18px] h-4 px-1 rounded-full bg-red-500 text-white text-[10px] font-semibold leading-none ring-1 ring-red-400/50 shadow-sm">
-                                        {unreadCount}
-                                    </span>
-                                )}
-                            </button>
-                        )}
+                        {/* Notifications supprimées */}
                         {!isAuthenticated && isPreview && (
                             <div className="flex items-center gap-2">
                                 <Link to="/login" className="px-3 py-1.5 rounded-lg text-sm font-medium border border-gray-300 hover:bg-gray-50">Log in</Link>
@@ -174,32 +144,7 @@ const Navbar = () => {
                                     <LogOut className="w-5 h-5" />
                                 </button>
 
-                                {openPanel && (
-                                    <div className="absolute right-0 top-12 w-80 bg-white border border-gray-200 rounded-xl shadow-xl p-3 z-[70]">
-                                        <div className="flex items-center justify-between mb-2">
-                                            <span className="text-sm font-semibold text-gray-800">Notifications</span>
-                                            <button
-                                                className="text-xs px-2 py-1 rounded border border-gray-300 hover:bg-gray-50"
-                                                onClick={markAllRead}
-                                            >
-                                                Tout marquer comme lu
-                                            </button>
-                                        </div>
-                                        <div className="max-h-80 overflow-y-auto space-y-2">
-                                            {(notifications || []).length === 0 ? (
-                                                <div className="text-sm text-gray-600 py-6 text-center">Aucune notification</div>
-                                            ) : (
-                                                notifications.map((n) => (
-                                                    <div key={n.id} className={`p-2 rounded-lg border ${n.read_at ? 'bg-white border-gray-200' : 'bg-blue-50 border-blue-100'}`}>
-                                                        <div className="text-xs text-gray-500">{n.type || 'info'}</div>
-                                                        <div className="text-sm font-medium text-gray-900">{n.title}</div>
-                                                        {n.body && <div className="text-sm text-gray-700">{n.body}</div>}
-                                                    </div>
-                                                ))
-                                            )}
-                                        </div>
-                                    </div>
-                                )}
+                                {/* Panneau de notifications supprimé */}
                             </>
                         ) : null}
                     </div>

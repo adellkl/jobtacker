@@ -299,14 +299,16 @@ export const JobProvider = ({ children }) => {
         return items;
     };
 
-    const toggleSaveJob = async (jobId) => {
+    const toggleSaveJob = async (jobId, jobDataOptional) => {
         const wasSaved = state.savedJobIds.includes(jobId);
         dispatch({ type: 'TOGGLE_SAVE_JOB', payload: jobId });
         if (user) {
             if (wasSaved) {
                 await supabase.from('saved_jobs').delete().eq('user_id', user.id).eq('job_id', jobId);
             } else {
-                const job = state.searchResults.find(j => j.id === jobId) || state.jobs.find(j => j.id === jobId);
+                const job = state.searchResults.find(j => j.id === jobId)
+                    || state.jobs.find(j => j.id === jobId)
+                    || jobDataOptional;
                 if (job) {
                     await supabase.from('saved_jobs').upsert({
                         user_id: user.id,

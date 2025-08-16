@@ -283,7 +283,7 @@ const Dashboard = () => {
             >
                 <div className="flex items-center justify-between mb-6">
                     <h2 className="text-lg font-semibold text-gray-900">Candidatures récentes</h2>
-                    <button onClick={() => navigate('/applications')} className="text-blue-600 hover:text-blue-700 text-sm font-medium">
+                    <button onClick={() => navigate('/candidatures')} className="text-blue-600 hover:text-blue-700 text-sm font-medium">
                         Voir tout
                     </button>
                 </div>
@@ -485,7 +485,7 @@ const Dashboard = () => {
 };
 
 export default Dashboard;
-
 // Modals
 // Nouvelle candidature
 // Injecter les modals tout en bas du composant via JSX fragment
+

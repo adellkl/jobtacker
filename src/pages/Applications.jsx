@@ -15,12 +15,17 @@ import {
     CheckCircle,
     XCircle,
     AlertCircle,
-    MoreVertical
+    MoreVertical,
+    ExternalLink,
+    Bookmark,
+    Check
 } from 'lucide-react';
 import { useJobContext } from '../context/JobContext';
 import { formatDistanceToNow, format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import toast from 'react-hot-toast';
+import { useAuth } from '../context/AuthContext';
+import { sanitizeUrl } from '../lib/security';
 
 // Helpers extraits hors composant pour ne pas être recréés à chaque rendu
 const getStatusColor = (status) => {
@@ -30,6 +35,29 @@ const getStatusColor = (status) => {
         case 'rejected': return 'bg-red-100 text-red-800';
         case 'interview': return 'bg-blue-100 text-blue-800';
         default: return 'bg-gray-100 text-gray-800';
+    }
+};
+
+const toTitleCase = (s) => String(s)
+    .split(' ')
+    .map(w => w ? w.charAt(0).toUpperCase() + w.slice(1) : '')
+    .join(' ');
+
+const extractTitleFromUrl = (rawUrl) => {
+    try {
+        const u = new URL(String(rawUrl));
+        let slug = u.pathname.split('/').filter(Boolean).pop() || '';
+        slug = slug
+            .replace(/\.(html?|php|aspx?)$/i, '')
+            .replace(/[-_+]+/g, ' ');
+        slug = decodeURIComponent(slug).replace(/\s+/g, ' ').trim();
+        if (!slug) return '';
+        // Retirer identifiants numériques très longs en fin de slug
+        slug = slug.replace(/\b\d{6,}\b$/, '').trim();
+        if (!slug) return '';
+        return toTitleCase(slug);
+    } catch {
+        return '';
     }
 };
 
@@ -55,42 +83,67 @@ const ApplicationCard = ({
     setNoteTexts,
     onCancelNotes,
     onSaveNotes,
+    isSaved,
+    onToggleFavorite,
 }) => (
     <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow"
+        className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6 hover:shadow-md transition-shadow"
     >
-        <div className="flex justify-between items-start mb-4">
-            <div className="flex-1">
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                    {application.jobData?.title || 'Poste non spécifié'}
-                </h3>
-                <div className="flex items-center space-x-4 text-sm text-gray-600 mb-3">
-                    <div className="flex items-center space-x-1">
-                        <Building className="w-4 h-4" />
-                        <span>{application.jobData?.company || 'Entreprise non spécifiée'}</span>
-                    </div>
-                    <div className="flex items-center space-x-1">
-                        <MapPin className="w-4 h-4" />
-                        <span>{application.jobData?.location || 'Localisation non spécifiée'}</span>
+        <div className="flex flex-col sm:flex-row justify-between items-start gap-3 sm:gap-0 mb-4">
+            <div className="flex-1 min-w-0">
+                <div className="flex items-start gap-3">
+                    {application.jobData?.imageUrl ? (
+                        <img src={application.jobData.imageUrl} alt="Logo de l'entreprise" className="w-9 h-9 rounded border border-gray-200 object-contain bg-white" loading="lazy" />
+                    ) : (
+                        <div className="w-9 h-9 rounded bg-gradient-to-r from-blue-600 to-purple-600 text-white flex items-center justify-center text-sm font-semibold">
+                            {(application.jobData?.company || application.jobData?.source || '•').charAt(0).toUpperCase()}
+                        </div>
+                    )}
+                    <div className="min-w-0">
+                        <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-1 truncate">
+                            {application.jobData?.title || 'Poste non spécifié'}
+                        </h3>
+                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs sm:text-sm text-gray-600">
+                            <div className="flex items-center space-x-1 truncate">
+                                <Building className="w-4 h-4" />
+                                <span className="truncate">{application.jobData?.company || application.jobData?.source || 'Entreprise inconnue'}</span>
+                            </div>
+                            <div className="flex items-center space-x-1 truncate">
+                                <MapPin className="w-4 h-4" />
+                                <span>{application.jobData?.location || 'Localisation inconnue'}</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
-            <div className="flex items-center space-x-2">
-                <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(application.status)}`}>
+            <div className="flex items-center flex-wrap gap-2">
+                <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${getStatusColor(application.status)}`}>
                     {getStatusLabel(application.status)}
                 </span>
-                <button className="p-2 text-gray-400 hover:text-gray-600 transition-colors">
-                    <MoreVertical className="w-4 h-4" />
-                </button>
+                {application?.jobData?.id && (
+                    <button
+                        onClick={() => onToggleFavorite(application.jobData.id, application.jobData)}
+                        className={`p-2 rounded-lg border ${isSaved ? 'border-yellow-300 text-yellow-600 bg-yellow-50' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}`}
+                        aria-label={isSaved ? 'Retirer des favoris' : 'Ajouter aux favoris'}
+                        title={isSaved ? 'Retirer des favoris' : 'Ajouter aux favoris'}
+                    >
+                        {isSaved ? <Check className="w-4 h-4" /> : <Bookmark className="w-4 h-4" />}
+                    </button>
+                )}
+                {application?.jobData?.url && (
+                    <a href={sanitizeUrl(application.jobData.url)} target="_blank" rel="noreferrer noopener" className="p-2 text-gray-400 hover:text-gray-600 transition-colors" title="Voir l'offre originale">
+                        <ExternalLink className="w-4 h-4" />
+                    </a>
+                )}
             </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-4 mb-4 text-sm text-gray-600">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-4 text-xs sm:text-sm text-gray-600">
             <div className="flex items-center space-x-2">
                 <Calendar className="w-4 h-4" />
-                <span>Postulé le {format(new Date(application.appliedAt), 'dd/MM/yyyy', { locale: fr })}</span>
+                <span>Postulée le {format(new Date(application.appliedAt), 'dd/MM/yyyy', { locale: fr })}</span>
             </div>
             <div className="flex items-center space-x-2">
                 <Clock className="w-4 h-4" />
@@ -104,21 +157,21 @@ const ApplicationCard = ({
             </div>
         )}
 
-        <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div className="flex items-center flex-wrap gap-2">
                 <button
                     onClick={() => onEditNotes(application.id)}
                     className="text-blue-600 hover:text-blue-700 text-sm font-medium flex items-center space-x-1"
                 >
                     <Edit className="w-4 h-4" />
-                    <span>{application.notes ? 'Modifier' : 'Ajouter'} des notes</span>
+                    <span>{application.notes ? 'Modifier mes notes' : 'Ajouter une note'}</span>
                 </button>
             </div>
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center flex-wrap gap-2">
                 <select
                     value={application.status}
                     onChange={(e) => onChangeStatus(application.id, e.target.value)}
-                    className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                    className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm w-full sm:w-auto"
                 >
                     <option value="applied">Candidature envoyée</option>
                     <option value="interview">Entretien</option>
@@ -168,8 +221,82 @@ const ApplicationCard = ({
     </motion.div>
 );
 
+function ImportFromUrl() {
+    const { addApplication } = useJobContext();
+    const [url, setUrl] = useState('');
+    const handleImport = async () => {
+        const raw = String(url || '').trim();
+        if (!raw) { toast.error('URL requise'); return; }
+        try {
+            const u = new URL(raw);
+            const hostname = u.hostname.replace(/^www\./, '');
+            const jobId = `url-${Date.now()}`;
+            // Essai de récupération de métadonnées basique
+            let title = '';
+            let company = hostname;
+            let imageUrl = `https://logo.clearbit.com/${hostname}`;
+            try {
+                const resp = await fetch(`https://api.microlink.io/?url=${encodeURIComponent(raw)}&audio=false&video=false&screenshot=false`);
+                if (resp.ok) {
+                    const data = await resp.json();
+                    const d = data?.data || {};
+                    const jsonld = d.jsonld;
+                    if (jsonld) {
+                        const arr = Array.isArray(jsonld) ? jsonld : [jsonld];
+                        const jp = arr.find(x => {
+                            const t = x?.['@type'];
+                            return t === 'JobPosting' || (Array.isArray(t) && t.includes('JobPosting'));
+                        });
+                        if (jp) {
+                            if (!title) title = jp.title || '';
+                            if (!company) company = jp.hiringOrganization?.name || company;
+                        }
+                    }
+                    if (!title) title = d.title || d.headline || '';
+                    if (d.publisher) company = d.publisher;
+                    if (d.logo?.url) imageUrl = d.logo.url;
+                    else if (d.image?.url) imageUrl = d.image.url;
+                }
+            } catch { }
+            if (!title) {
+                const fromUrl = extractTitleFromUrl(raw);
+                if (fromUrl) title = fromUrl;
+            }
+            const job = {
+                id: jobId,
+                title: title || `Offre sur ${hostname}`,
+                company,
+                location: '',
+                remote: false,
+                salary: '—',
+                experience: '',
+                type: '',
+                description: raw,
+                requirements: [],
+                postedAt: new Date().toISOString(),
+                applied: false,
+                saved: false,
+                source: hostname,
+                imageUrl,
+                url: raw,
+            };
+            await addApplication(jobId, job);
+            setUrl('');
+            toast.success('Offre importée dans vos candidatures');
+        } catch {
+            toast.error("Lien invalide. Merci d'entrer une URL complète.");
+        }
+    };
+    return (
+        <div className="flex flex-col md:flex-row gap-3">
+            <input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="Coller le lien de l'offre (https://...)" className="flex-1 px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+            <button onClick={handleImport} className="px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Importer</button>
+        </div>
+    );
+}
+
 const Applications = () => {
-    const { applications, updateApplicationStatus, deleteApplication, updateApplicationNotes } = useJobContext();
+    const { applications, updateApplicationStatus, deleteApplication, updateApplicationNotes, savedJobIds, toggleSaveJob } = useJobContext();
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
     const [showFilters, setShowFilters] = useState(false);
@@ -244,57 +371,23 @@ const Applications = () => {
             {/* Header */}
             <div className="mb-8">
                 <h1 className="text-3xl font-bold text-gray-900 mb-2">
-                    Mes Candidatures
+                    Mes candidatures
                 </h1>
                 <p className="text-gray-600">
-                    Suivez et gérez toutes vos candidatures en un seul endroit
+                    Centralisez vos candidatures, mettez à jour vos statuts et conservez vos notes au même endroit.
                 </p>
             </div>
 
-            {/* Search and Filters */}
+            {/* Import rapide par URL */}
             <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6"
             >
-                <div className="flex flex-col lg:flex-row gap-4">
-                    <div className="flex-1 relative">
-                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                        <input
-                            type="text"
-                            placeholder="Rechercher dans vos candidatures..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        />
-                    </div>
-                    <div className="flex items-center space-x-2">
-                        <select
-                            value={statusFilter}
-                            onChange={(e) => setStatusFilter(e.target.value)}
-                            className="px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        >
-                            {statusOptions.map(option => (
-                                <option key={option.value} value={option.value}>
-                                    {option.label}
-                                </option>
-                            ))}
-                        </select>
-                        <button
-                            onClick={() => setShowFilters(!showFilters)}
-                            className={`px-4 py-3 border rounded-lg transition-colors flex items-center space-x-2 ${showFilters
-                                ? 'border-blue-600 text-blue-600 bg-blue-50'
-                                : 'border-gray-300 text-gray-700 hover:bg-gray-50'
-                                }`}
-                        >
-                            <Filter className="w-5 h-5" />
-                            <span className="hidden sm:inline">Plus de filtres</span>
-                        </button>
-                    </div>
-                </div>
+                <ImportFromUrl />
             </motion.div>
 
-            {/* Additional Filters */}
+            {/* Filtres supplémentaires */}
             <AnimatePresence>
                 {showFilters && (
                     <motion.div
@@ -315,7 +408,7 @@ const Applications = () => {
                                     }}
                                 >
                                     <option value="">Toutes les dates</option>
-                                    <option value="today">Aujourd'hui</option>
+                                    <option value="today">Aujourd’hui</option>
                                     <option value="week">Cette semaine</option>
                                     <option value="month">Ce mois</option>
                                     <option value="quarter">Ce trimestre</option>
@@ -327,7 +420,7 @@ const Applications = () => {
                                 </label>
                                 <input
                                     type="text"
-                                    placeholder="Filtrer par entreprise..."
+                                    placeholder="Filtrer par entreprise…"
                                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                     onChange={(e) => {
                                         console.log('Filtre entreprise:', e.target.value);
@@ -340,7 +433,7 @@ const Applications = () => {
                                 </label>
                                 <input
                                     type="text"
-                                    placeholder="Filtrer par localisation..."
+                                    placeholder="Filtrer par localisation…"
                                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                     onChange={(e) => {
                                         console.log('Filtre localisation:', e.target.value);
@@ -408,7 +501,7 @@ const Applications = () => {
                 })}
             </div>
 
-            {/* Applications List */}
+            {/* Liste des candidatures */}
             {filteredApplications.length === 0 ? (
                 <motion.div
                     initial={{ opacity: 0 }}
@@ -417,12 +510,12 @@ const Applications = () => {
                 >
                     <FileText className="w-16 h-16 text-gray-400 mx-auto mb-4" />
                     <h3 className="text-lg font-medium text-gray-900 mb-2">
-                        {applications.length === 0 ? 'Aucune candidature pour le moment' : 'Aucune candidature trouvée'}
+                        {applications.length === 0 ? 'Aucune candidature pour le moment' : 'Aucun résultat'}
                     </h3>
                     <p className="text-gray-600 mb-4">
                         {applications.length === 0
-                            ? 'Commencez par rechercher des emplois et postuler'
-                            : 'Essayez de modifier vos critères de recherche'
+                            ? 'Ajoutez votre première candidature depuis la recherche d’emplois ou manuellement.'
+                            : 'Ajustez vos critères de recherche ou vos filtres pour élargir les résultats.'
                         }
                     </p>
                     <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
@@ -436,7 +529,7 @@ const Applications = () => {
                             <h2 className="text-lg font-semibold text-gray-900 mb-4">
                                 {getStatusLabel(status)} ({apps.length})
                             </h2>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                                 {apps.map((app) => (
                                     <ApplicationCard
                                         key={app.id}
@@ -450,6 +543,8 @@ const Applications = () => {
                                         setNoteTexts={setNoteTexts}
                                         onCancelNotes={handleCancelNotes}
                                         onSaveNotes={handleSaveNotes}
+                                        isSaved={savedJobIds.includes(app?.jobData?.id)}
+                                        onToggleFavorite={toggleSaveJob}
                                     />
                                 ))}
                             </div>
